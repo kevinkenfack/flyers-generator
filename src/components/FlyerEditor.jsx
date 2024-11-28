@@ -24,7 +24,7 @@ const ModernFlyerEditor = () => {
   const [isImageLoaded, setIsImageLoaded] = useState(false);
 
   // Refs
-  const canvasRef = useRef(null);
+  const baseCanvasRef = useRef(null);
   const previewCanvasRef = useRef(null);
   const cropperImageRef = useRef(null);
   const imageInputRef = useRef(null);
@@ -35,25 +35,15 @@ const ModernFlyerEditor = () => {
   // Enhanced Notification System
   const addNotification = (message, type = 'success') => {
     const id = Date.now();
-    const newNotification = { 
-      id, 
-      message, 
-      type 
-    };
-    
+    const newNotification = { id, message, type };
     setNotifications(prev => [...prev, newNotification]);
-
-    // Auto-remove notification after 3 seconds
-    setTimeout(() => {
-      removeNotification(id);
-    }, 3000);
+    setTimeout(() => removeNotification(id), 3000);
   };
 
   const removeNotification = (id) => {
     setNotifications(prev => prev.filter(notification => notification.id !== id));
   };
 
-  // Notification Icons
   const NotificationIcon = {
     success: <CheckCircle2 className="w-5 h-5 text-green-500" />,
     error: <XCircle className="w-5 h-5 text-red-500" />,
@@ -110,12 +100,24 @@ const ModernFlyerEditor = () => {
   };
 
   const renderFlyer = (ctx, base, user) => {
+    if (!ctx || !base) return;
+    
     ctx.clearRect(0, 0, FLYER_WIDTH, FLYER_HEIGHT);
     ctx.drawImage(base, 0, 0, FLYER_WIDTH, FLYER_HEIGHT);
 
     if (user) {
       const { x, y, width, height } = IMAGE_ZONE;
       ctx.drawImage(user, x, y, width, height);
+    }
+  };
+
+  // Update preview canvas
+  const updatePreview = (base, user) => {
+    if (previewCanvasRef.current && base) {
+      const previewCtx = previewCanvasRef.current.getContext('2d');
+      previewCanvasRef.current.width = FLYER_WIDTH;
+      previewCanvasRef.current.height = FLYER_HEIGHT;
+      renderFlyer(previewCtx, base, user);
     }
   };
 
@@ -144,11 +146,11 @@ const ModernFlyerEditor = () => {
       if (cropperImageRef.current) {
         cropperImageRef.current.src = imageUrl;
 
-        // Destroy existing cropper if it exists
         if (cropper) {
           cropper.destroy();
         }
 
+        // Initialize new cropper
         const newCropper = new Cropper(cropperImageRef.current, {
           aspectRatio: 1,
           viewMode: 2,
@@ -163,18 +165,19 @@ const ModernFlyerEditor = () => {
           toggleDragModeOnDblclick: false,
           minContainerWidth: 250,
           minContainerHeight: 250,
+          ready: function() {
+            cropBtnRef.current.disabled = false;
+          }
         });
 
         setCropper(newCropper);
-        cropBtnRef.current.disabled = false;
         setIsImageLoaded(true);
         addNotification('Image chargée avec succès', 'success');
       }
-
-      setLoading(false);
     } catch (error) {
       console.error('Erreur traitement image:', error);
       addNotification('Erreur lors du traitement de l\'image', 'error');
+    } finally {
       setLoading(false);
     }
   };
@@ -202,20 +205,15 @@ const ModernFlyerEditor = () => {
       const croppedImage = await loadImage(URL.createObjectURL(blob));
       setUserImage(croppedImage);
       
-      // Render preview canvas
-      if (previewCanvasRef.current) {
-        const previewCtx = previewCanvasRef.current.getContext('2d');
-        previewCanvasRef.current.width = FLYER_WIDTH;
-        previewCanvasRef.current.height = FLYER_HEIGHT;
-        renderFlyer(previewCtx, flyerBase, croppedImage);
-      }
-
+      // Update preview with cropped image
+      updatePreview(flyerBase, croppedImage);
+      
       downloadBtnRef.current.disabled = false;
       addNotification('Image recadrée avec succès', 'success');
-      setLoading(false);
     } catch (error) {
       console.error('Erreur recadrage:', error);
       addNotification('Erreur lors du recadrage', 'error');
+    } finally {
       setLoading(false);
     }
   };
@@ -255,27 +253,21 @@ const ModernFlyerEditor = () => {
       URL.revokeObjectURL(url);
       setProgress(100);
       addNotification('Flyer téléchargé avec succès', 'success');
-      setLoading(false);
     } catch (error) {
       console.error('Erreur téléchargement:', error);
       addNotification('Erreur lors du téléchargement', 'error');
+    } finally {
       setLoading(false);
     }
   };
 
-  // Load base flyer on component mount
+  // Load base flyer and initialize preview on component mount
   useEffect(() => {
     const loadFlyerBase = async () => {
       try {
         const baseImage = await loadImage('/forex.jpg');
         setFlyerBase(baseImage);
-
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-        canvas.width = FLYER_WIDTH;
-        canvas.height = FLYER_HEIGHT;
-
-        renderFlyer(ctx, baseImage, null);
+        updatePreview(baseImage, null);
       } catch (error) {
         console.error('Erreur chargement base:', error);
         addNotification('Erreur lors du chargement du modèle', 'error');
@@ -364,11 +356,11 @@ const ModernFlyerEditor = () => {
             </div>
 
             {/* Image Preview Area */}
-            <div className="border-2 border-dashed border-slate-300 rounded-xl min-h-[250px] sm:min-h-[300px] flex justify-center items-center">
+            <div className="border-2 border-dashed border-slate-300 rounded-xl min-h-[250px] sm:min-h-[300px] flex justify-center items-center overflow-hidden">
               <img 
                 ref={cropperImageRef} 
                 alt="Image à recadrer" 
-                className="max-w-full hidden" 
+                className={isImageLoaded ? 'block max-w-full h-auto' : 'hidden'}
               />
               {!isImageLoaded && (
                 <div className="text-center text-slate-500">
@@ -379,8 +371,8 @@ const ModernFlyerEditor = () => {
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex justify-center gap-4">
+        {/* Action Buttons */}
+        <div className="flex justify-center gap-4">
             <button 
               ref={cropBtnRef}
               onClick={cropImage}
@@ -400,34 +392,26 @@ const ModernFlyerEditor = () => {
           </div>
         </div>
 
-        {/* Preview Section */}
-        <div className="mt-6 p-4 sm:p-8">
+        {/* Preview Section - Always visible */}
+        <div className="mt-6 p-4 sm:p-8 bg-slate-50">
           <h2 className="text-xl font-semibold mb-4 text-center">Prévisualisation du Flyer</h2>
-          <canvas 
-            ref={previewCanvasRef} 
-            className="max-w-full rounded-xl mx-auto shadow-lg" 
-            style={{ 
-              width: '100%', 
-              height: 'auto', 
-              display: userImage ? 'block' : 'none' 
-            }} 
-          />
-          {!userImage && (
-            <div className="text-center text-slate-500 py-10">
-              <p>Votre flyer personnalisé apparaîtra ici après avoir recadré une image</p>
+          <div className="rounded-xl overflow-hidden shadow-lg max-w-2xl mx-auto">
+            <canvas 
+              ref={previewCanvasRef}
+              className="w-full h-auto" 
+              style={{ 
+                maxWidth: '100%',
+                aspectRatio: `${FLYER_WIDTH}/${FLYER_HEIGHT}`
+              }}
+            />
+          </div>
+          {!flyerBase && (
+            <div className="text-center text-slate-500 py-4">
+              <p>Chargement du modèle de flyer...</p>
             </div>
           )}
         </div>
 
-        {/* Hidden rendering canvas */}
-        <canvas 
-          ref={canvasRef} 
-          className="hidden" 
-          style={{ 
-            width: '100%', 
-            height: 'auto' 
-          }} 
-        />
       </div>
     </div>
   );
