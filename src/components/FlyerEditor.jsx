@@ -21,9 +21,11 @@ const ModernFlyerEditor = () => {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [notifications, setNotifications] = useState([]);
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
 
   // Refs
   const canvasRef = useRef(null);
+  const previewCanvasRef = useRef(null);
   const cropperImageRef = useRef(null);
   const imageInputRef = useRef(null);
   const cameraInputRef = useRef(null);
@@ -142,6 +144,11 @@ const ModernFlyerEditor = () => {
       if (cropperImageRef.current) {
         cropperImageRef.current.src = imageUrl;
 
+        // Destroy existing cropper if it exists
+        if (cropper) {
+          cropper.destroy();
+        }
+
         const newCropper = new Cropper(cropperImageRef.current, {
           aspectRatio: 1,
           viewMode: 2,
@@ -160,6 +167,7 @@ const ModernFlyerEditor = () => {
 
         setCropper(newCropper);
         cropBtnRef.current.disabled = false;
+        setIsImageLoaded(true);
         addNotification('Image chargée avec succès', 'success');
       }
 
@@ -193,6 +201,15 @@ const ModernFlyerEditor = () => {
 
       const croppedImage = await loadImage(URL.createObjectURL(blob));
       setUserImage(croppedImage);
+      
+      // Render preview canvas
+      if (previewCanvasRef.current) {
+        const previewCtx = previewCanvasRef.current.getContext('2d');
+        previewCanvasRef.current.width = FLYER_WIDTH;
+        previewCanvasRef.current.height = FLYER_HEIGHT;
+        renderFlyer(previewCtx, flyerBase, croppedImage);
+      }
+
       downloadBtnRef.current.disabled = false;
       addNotification('Image recadrée avec succès', 'success');
       setLoading(false);
@@ -317,13 +334,13 @@ const ModernFlyerEditor = () => {
             <div className="space-y-4">
               <button 
                 onClick={() => imageInputRef.current.click()} 
-                className="w-full btn bg-blue-500 hover:bg-blue-600 transition-colors rounded-xl shadow-md text-sm sm:text-base"
+                className="w-full p-3 bg-blue-500 hover:bg-blue-600 text-white flex items-center justify-center transition-colors rounded-xl shadow-md text-sm sm:text-base"
               >
                 <ImageIcon className="mr-2 w-4 h-4 sm:w-5 sm:h-5" /> Choisir une image
               </button>
               <button 
                 onClick={() => cameraInputRef.current.click()} 
-                className="w-full btn bg-indigo-600 hover:bg-indigo-700 transition-colors rounded-xl shadow-md text-sm sm:text-base"
+                className="w-full p-3 bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center transition-colors rounded-xl shadow-md text-sm sm:text-base"
               >
                 <Camera className="mr-2 w-4 h-4 sm:w-5 sm:h-5" /> Prendre une photo
               </button>
@@ -353,7 +370,7 @@ const ModernFlyerEditor = () => {
                 alt="Image à recadrer" 
                 className="max-w-full hidden" 
               />
-              {!cropperImageRef.current?.src && (
+              {!isImageLoaded && (
                 <div className="text-center text-slate-500">
                   <ImageIcon className="mx-auto mb-4 w-10 h-10 sm:w-12 sm:h-12 text-slate-400" />
                   <p className="text-sm sm:text-base">Votre image apparaîtra ici</p>
@@ -363,11 +380,11 @@ const ModernFlyerEditor = () => {
           </div>
 
           {/* Action Buttons */}
-          <div className="grid sm:grid-cols-2 gap-4">
+          <div className="flex justify-center gap-4">
             <button 
               ref={cropBtnRef}
               onClick={cropImage}
-              className="btn bg-slate-500 hover:bg-slate-600 transition-colors rounded-xl shadow-md text-sm sm:text-base" 
+              className="p-3 bg-indigo-500 hover:bg-indigo-600 text-white flex items-center justify-center transition-colors rounded-xl shadow-md text-sm sm:text-base disabled:opacity-50" 
               disabled
             >
               <Crop className="mr-2 w-4 h-4 sm:w-5 sm:h-5" /> Recadrer
@@ -375,7 +392,7 @@ const ModernFlyerEditor = () => {
             <button 
               ref={downloadBtnRef}
               onClick={handleDownload}
-              className="btn bg-green-500 hover:bg-green-600 transition-colors rounded-xl shadow-md text-sm sm:text-base" 
+              className="p-3 bg-green-500 hover:bg-green-600 text-white flex items-center justify-center transition-colors rounded-xl shadow-md text-sm sm:text-base disabled:opacity-50" 
               disabled
             >
               <Download className="mr-2 w-4 h-4 sm:w-5 sm:h-5" /> Télécharger
@@ -383,15 +400,33 @@ const ModernFlyerEditor = () => {
           </div>
         </div>
 
-         {/* Canvas caché pour le rendu */}
-         <canvas 
+        {/* Preview Section */}
+        <div className="mt-6 p-4 sm:p-8">
+          <h2 className="text-xl font-semibold mb-4 text-center">Prévisualisation du Flyer</h2>
+          <canvas 
+            ref={previewCanvasRef} 
+            className="max-w-full rounded-xl mx-auto shadow-lg" 
+            style={{ 
+              width: '100%', 
+              height: 'auto', 
+              display: userImage ? 'block' : 'none' 
+            }} 
+          />
+          {!userImage && (
+            <div className="text-center text-slate-500 py-10">
+              <p>Votre flyer personnalisé apparaîtra ici après avoir recadré une image</p>
+            </div>
+          )}
+        </div>
+
+        {/* Hidden rendering canvas */}
+        <canvas 
           ref={canvasRef} 
-          className="mt-6 max-w-full rounded-xl hidden" 
+          className="hidden" 
           style={{ 
             width: '100%', 
-            height: 'auto',
-            display: userImage ? 'block' : 'none'
-          }}
+            height: 'auto' 
+          }} 
         />
       </div>
     </div>
