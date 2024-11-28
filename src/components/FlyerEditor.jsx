@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Cropper from 'cropperjs';
 import 'cropperjs/dist/cropper.min.css';
-import { Download, Camera, Image, Crop } from 'lucide-react';
+import { Download, Camera, Image as ImageIcon, Crop, CheckCircle2, XCircle, Info } from 'lucide-react';
 
 const ModernFlyerEditor = () => {
   // Constants for flyer dimensions and image zone
@@ -20,7 +20,7 @@ const ModernFlyerEditor = () => {
   const [cropper, setCropper] = useState(null);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [message, setMessage] = useState(null);
+  const [notifications, setNotifications] = useState([]);
 
   // Refs
   const canvasRef = useRef(null);
@@ -30,18 +30,35 @@ const ModernFlyerEditor = () => {
   const cropBtnRef = useRef(null);
   const downloadBtnRef = useRef(null);
 
-  // Utility Functions
-  const showMessage = (text, type = 'success') => {
-    const colors = {
-      success: '#22c55e',
-      error: '#ef4444',
-      info: '#3b82f6'
+  // Enhanced Notification System
+  const addNotification = (message, type = 'success') => {
+    const id = Date.now();
+    const newNotification = { 
+      id, 
+      message, 
+      type 
     };
+    
+    setNotifications(prev => [...prev, newNotification]);
 
-    setMessage({ text, color: colors[type] });
-    setTimeout(() => setMessage(null), 3000);
+    // Auto-remove notification after 3 seconds
+    setTimeout(() => {
+      removeNotification(id);
+    }, 3000);
   };
 
+  const removeNotification = (id) => {
+    setNotifications(prev => prev.filter(notification => notification.id !== id));
+  };
+
+  // Notification Icons
+  const NotificationIcon = {
+    success: <CheckCircle2 className="w-5 h-5 text-green-500" />,
+    error: <XCircle className="w-5 h-5 text-red-500" />,
+    info: <Info className="w-5 h-5 text-blue-500" />
+  };
+
+  // Utility Functions
   const loadImage = (src) => {
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -107,12 +124,12 @@ const ModernFlyerEditor = () => {
 
     const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
     if (!validTypes.includes(file.type)) {
-      showMessage('Format non supporté. Utilisez JPG, PNG ou WebP', 'error');
+      addNotification('Format non supporté. Utilisez JPG, PNG ou WebP', 'error');
       return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      showMessage('Image trop volumineuse (max 10 Mo)', 'error');
+      addNotification('Image trop volumineuse (max 10 Mo)', 'error');
       return;
     }
 
@@ -143,20 +160,20 @@ const ModernFlyerEditor = () => {
 
         setCropper(newCropper);
         cropBtnRef.current.disabled = false;
-        showMessage('Image chargée avec succès', 'success');
+        addNotification('Image chargée avec succès', 'success');
       }
 
       setLoading(false);
     } catch (error) {
       console.error('Erreur traitement image:', error);
-      showMessage('Erreur lors du traitement de l\'image', 'error');
+      addNotification('Erreur lors du traitement de l\'image', 'error');
       setLoading(false);
     }
   };
 
   const cropImage = async () => {
     if (!cropper) {
-      showMessage('Aucune image à recadrer', 'error');
+      addNotification('Aucune image à recadrer', 'error');
       return;
     }
 
@@ -177,18 +194,18 @@ const ModernFlyerEditor = () => {
       const croppedImage = await loadImage(URL.createObjectURL(blob));
       setUserImage(croppedImage);
       downloadBtnRef.current.disabled = false;
-      showMessage('Image recadrée avec succès', 'success');
+      addNotification('Image recadrée avec succès', 'success');
       setLoading(false);
     } catch (error) {
       console.error('Erreur recadrage:', error);
-      showMessage('Erreur lors du recadrage', 'error');
+      addNotification('Erreur lors du recadrage', 'error');
       setLoading(false);
     }
   };
 
   const handleDownload = async () => {
     if (!userImage) {
-      showMessage('Aucune image à télécharger', 'error');
+      addNotification('Aucune image à télécharger', 'error');
       return;
     }
 
@@ -220,11 +237,11 @@ const ModernFlyerEditor = () => {
 
       URL.revokeObjectURL(url);
       setProgress(100);
-      showMessage('Flyer téléchargé avec succès', 'success');
+      addNotification('Flyer téléchargé avec succès', 'success');
       setLoading(false);
     } catch (error) {
       console.error('Erreur téléchargement:', error);
-      showMessage('Erreur lors du téléchargement', 'error');
+      addNotification('Erreur lors du téléchargement', 'error');
       setLoading(false);
     }
   };
@@ -233,7 +250,7 @@ const ModernFlyerEditor = () => {
   useEffect(() => {
     const loadFlyerBase = async () => {
       try {
-        const baseImage = await loadImage('https://raw.githubusercontent.com/kevinkenfack/forex-flyer/main/forex.jpg');
+        const baseImage = await loadImage('/forex.jpg');
         setFlyerBase(baseImage);
 
         const canvas = canvasRef.current;
@@ -244,7 +261,7 @@ const ModernFlyerEditor = () => {
         renderFlyer(ctx, baseImage, null);
       } catch (error) {
         console.error('Erreur chargement base:', error);
-        showMessage('Erreur lors du chargement du modèle', 'error');
+        addNotification('Erreur lors du chargement du modèle', 'error');
       }
     };
 
@@ -252,107 +269,122 @@ const ModernFlyerEditor = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 flex justify-center items-center">
-      <div className="w-full max-w-4xl bg-white rounded-2xl shadow-lg p-6">
-        {/* Loading Overlay */}
-        {loading && (
-          <div className="fixed inset-0 bg-white/95 z-50 flex flex-col justify-center items-center">
-            <div className="w-12 h-12 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
-            <div className="progress-bar w-48 h-1 bg-slate-200 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-blue-600 transition-all duration-300" 
-                style={{ width: `${progress}%` }}
-              ></div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 flex justify-center items-center">
+      {/* Notification Container */}
+      <div className="fixed top-4 right-4 z-50 space-y-2">
+        {notifications.map((notification) => (
+          <div 
+            key={notification.id}
+            className="flex items-center space-x-3 bg-white shadow-lg rounded-lg p-3 border transition-all duration-300 ease-in-out animate-slide-in"
+          >
+            {NotificationIcon[notification.type]}
+            <span className="text-sm text-slate-800">{notification.message}</span>
+            <button 
+              onClick={() => removeNotification(notification.id)} 
+              className="ml-2 hover:bg-slate-100 rounded-full p-1"
+            >
+              <XCircle className="w-4 h-4 text-slate-400 hover:text-slate-600" />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* Loading Overlay */}
+      {loading && (
+        <div className="fixed inset-0 bg-white/90 z-50 flex flex-col justify-center items-center">
+          <div className="w-16 h-16 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+          <div className="progress-bar w-64 h-2 bg-slate-200 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-blue-600 transition-all duration-300" 
+              style={{ width: `${progress}%` }}
+            ></div>
+          </div>
+        </div>
+      )}
+
+      <div className="w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden">
+        {/* Header with Gradient */}
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-6 sm:p-8 text-center">
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2 sm:mb-3 tracking-tight">Créez votre Flyer Personnalisé</h1>
+          <p className="text-white/80 text-sm sm:text-base max-w-xl mx-auto">Transformez vos photos en flyers professionnels en quelques clics</p>
+        </div>
+
+        {/* Main Content */}
+        <div className="p-4 sm:p-8 space-y-6">
+          {/* Image Upload Section */}
+          <div className="grid sm:grid-cols-2 gap-4 sm:gap-6 items-center">
+            {/* Image Selection Buttons */}
+            <div className="space-y-4">
+              <button 
+                onClick={() => imageInputRef.current.click()} 
+                className="w-full btn bg-blue-500 hover:bg-blue-600 transition-colors rounded-xl shadow-md text-sm sm:text-base"
+              >
+                <ImageIcon className="mr-2 w-4 h-4 sm:w-5 sm:h-5" /> Choisir une image
+              </button>
+              <button 
+                onClick={() => cameraInputRef.current.click()} 
+                className="w-full btn bg-indigo-600 hover:bg-indigo-700 transition-colors rounded-xl shadow-md text-sm sm:text-base"
+              >
+                <Camera className="mr-2 w-4 h-4 sm:w-5 sm:h-5" /> Prendre une photo
+              </button>
+
+              {/* Hidden file inputs */}
+              <input 
+                type="file" 
+                ref={imageInputRef}
+                accept="image/*" 
+                className="hidden" 
+                onChange={handleImageUpload} 
+              />
+              <input 
+                type="file" 
+                ref={cameraInputRef}
+                accept="image/*" 
+                capture="environment" 
+                className="hidden" 
+                onChange={handleImageUpload} 
+              />
+            </div>
+
+            {/* Image Preview Area */}
+            <div className="border-2 border-dashed border-slate-300 rounded-xl min-h-[250px] sm:min-h-[300px] flex justify-center items-center">
+              <img 
+                ref={cropperImageRef} 
+                alt="Image à recadrer" 
+                className="max-w-full hidden" 
+              />
+              {!cropperImageRef.current?.src && (
+                <div className="text-center text-slate-500">
+                  <ImageIcon className="mx-auto mb-4 w-10 h-10 sm:w-12 sm:h-12 text-slate-400" />
+                  <p className="text-sm sm:text-base">Votre image apparaîtra ici</p>
+                </div>
+              )}
             </div>
           </div>
-        )}
 
-        {/* Message Overlay */}
-        {message && (
-          <div 
-            className="fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg text-white z-50 shadow-lg"
-            style={{ backgroundColor: message.color }}
-          >
-            {message.text}
-          </div>
-        )}
-
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-500 to-blue-700 text-white rounded-xl p-6 text-center mb-6">
-          <h1 className="text-2xl font-semibold mb-2">Créez votre Flyer Personnalisé</h1>
-          <p className="opacity-90">Importez une photo ou prenez-en une nouvelle pour créer votre flyer unique</p>
-        </div>
-
-        {/* Image Upload Section */}
-        <div className="bg-slate-50 rounded-xl p-6 mb-6">
-          <div className="grid grid-cols-2 gap-4 mb-6">
+          {/* Action Buttons */}
+          <div className="grid sm:grid-cols-2 gap-4">
             <button 
-              onClick={() => imageInputRef.current.click()} 
-              className="btn bg-blue-500 hover:bg-blue-600"
+              ref={cropBtnRef}
+              onClick={cropImage}
+              className="btn bg-slate-500 hover:bg-slate-600 transition-colors rounded-xl shadow-md text-sm sm:text-base" 
+              disabled
             >
-              <Image className="mr-2" /> Choisir une image
+              <Crop className="mr-2 w-4 h-4 sm:w-5 sm:h-5" /> Recadrer
             </button>
             <button 
-              onClick={() => cameraInputRef.current.click()} 
-              className="btn bg-blue-700 hover:bg-blue-800"
+              ref={downloadBtnRef}
+              onClick={handleDownload}
+              className="btn bg-green-500 hover:bg-green-600 transition-colors rounded-xl shadow-md text-sm sm:text-base" 
+              disabled
             >
-              <Camera className="mr-2" /> Prendre une photo
+              <Download className="mr-2 w-4 h-4 sm:w-5 sm:h-5" /> Télécharger
             </button>
           </div>
-
-          <input 
-            type="file" 
-            ref={imageInputRef}
-            accept="image/*" 
-            className="hidden" 
-            onChange={handleImageUpload} 
-          />
-          <input 
-            type="file" 
-            ref={cameraInputRef}
-            accept="image/*" 
-            capture="environment" 
-            className="hidden" 
-            onChange={handleImageUpload} 
-          />
-
-          <div className="border-2 border-dashed border-slate-300 rounded-xl min-h-[300px] flex justify-center items-center">
-            <img 
-              ref={cropperImageRef} 
-              alt="Image à recadrer" 
-              className="max-w-full hidden" 
-            />
-            {!cropperImageRef.current?.src && (
-              <div className="text-center text-slate-500">
-                <Image className="mx-auto mb-4 w-12 h-12 text-slate-400" />
-                <p>Votre image apparaîtra ici</p>
-              </div>
-            )}
-          </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="grid grid-cols-2 gap-4">
-          <button 
-            ref={cropBtnRef}
-            onClick={cropImage}
-            className="btn bg-slate-500 hover:bg-slate-600" 
-            disabled
-          >
-            <Crop className="mr-2" /> Recadrer
-          </button>
-          <button 
-            ref={downloadBtnRef}
-            onClick={handleDownload}
-            className="btn bg-green-500 hover:bg-green-600" 
-            disabled
-          >
-            <Download className="mr-2" /> Télécharger
-          </button>
-        </div>
-
-        {/* Canvas for rendering */}
-        <canvas 
+         {/* Canvas caché pour le rendu */}
+         <canvas 
           ref={canvasRef} 
           className="mt-6 max-w-full rounded-xl hidden" 
           style={{ 
