@@ -111,45 +111,30 @@ const ModernFlyerEditor = () => {
     }
   };
 
+  // Improved Preview Rendering
   const updatePreview = (base, user) => {
     if (previewCanvasRef.current && base) {
       const previewCtx = previewCanvasRef.current.getContext('2d');
       
-      // Amélioration du rendu
-      previewCtx.imageSmoothingEnabled = true;
-      previewCtx.imageSmoothingQuality = 'high';
-      
-      // Calcul de l'échelle
+      // Calculate scale based on container width
       const containerWidth = previewCanvasRef.current.parentElement.clientWidth;
       const scale = containerWidth / FLYER_WIDTH;
       
-      // Définition précise des dimensions
+      // Set canvas dimensions with scaled width and height
       previewCanvasRef.current.width = FLYER_WIDTH * scale;
       previewCanvasRef.current.height = FLYER_HEIGHT * scale;
       
-      // Rendu avec paramètres de haute qualité
+      // Clear and render with scaling
       previewCtx.clearRect(0, 0, previewCanvasRef.current.width, previewCanvasRef.current.height);
-      previewCtx.drawImage(
-        base, 
-        0, 0, 
-        FLYER_WIDTH, FLYER_HEIGHT,  // Taille source originale
-        0, 0, 
-        previewCanvasRef.current.width, previewCanvasRef.current.height  // Taille cible mise à l'échelle
-      );
-  
+      previewCtx.drawImage(base, 0, 0, previewCanvasRef.current.width, previewCanvasRef.current.height);
+
       if (user) {
         const { x, y, width, height } = IMAGE_ZONE;
         const scaledX = x * scale;
         const scaledY = y * scale;
         const scaledWidth = width * scale;
         const scaledHeight = height * scale;
-        
-        previewCtx.drawImage(
-          user, 
-          0, 0, width, height,  // Taille source originale
-          scaledX, scaledY, 
-          scaledWidth, scaledHeight  // Taille cible mise à l'échelle
-        );
+        previewCtx.drawImage(user, scaledX, scaledY, scaledWidth, scaledHeight);
       }
     }
   };
