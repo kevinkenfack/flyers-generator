@@ -102,16 +102,12 @@ const ModernFlyerEditor = () => {
   const renderFlyer = (ctx, base, user) => {
     if (!ctx || !base) return;
     
-    // Paramètres de haute qualité
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    
     ctx.clearRect(0, 0, FLYER_WIDTH, FLYER_HEIGHT);
     ctx.drawImage(base, 0, 0, FLYER_WIDTH, FLYER_HEIGHT);
-  
+
     if (user) {
       const { x, y, width, height } = IMAGE_ZONE;
-      ctx.drawImage(user, 0, 0, user.width, user.height, x, y, width, height);
+      ctx.drawImage(user, x, y, width, height);
     }
   };
 
