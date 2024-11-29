@@ -102,39 +102,58 @@ const ModernFlyerEditor = () => {
   const renderFlyer = (ctx, base, user) => {
     if (!ctx || !base) return;
     
+    // Paramètres de haute qualité
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    
     ctx.clearRect(0, 0, FLYER_WIDTH, FLYER_HEIGHT);
     ctx.drawImage(base, 0, 0, FLYER_WIDTH, FLYER_HEIGHT);
-
+  
     if (user) {
       const { x, y, width, height } = IMAGE_ZONE;
-      ctx.drawImage(user, x, y, width, height);
+      ctx.drawImage(user, 0, 0, user.width, user.height, x, y, width, height);
     }
   };
 
-  // Improved Preview Rendering
   const updatePreview = (base, user) => {
     if (previewCanvasRef.current && base) {
       const previewCtx = previewCanvasRef.current.getContext('2d');
       
-      // Calculate scale based on container width
+      // Amélioration du rendu
+      previewCtx.imageSmoothingEnabled = true;
+      previewCtx.imageSmoothingQuality = 'high';
+      
+      // Calcul de l'échelle
       const containerWidth = previewCanvasRef.current.parentElement.clientWidth;
       const scale = containerWidth / FLYER_WIDTH;
       
-      // Set canvas dimensions with scaled width and height
+      // Définition précise des dimensions
       previewCanvasRef.current.width = FLYER_WIDTH * scale;
       previewCanvasRef.current.height = FLYER_HEIGHT * scale;
       
-      // Clear and render with scaling
+      // Rendu avec paramètres de haute qualité
       previewCtx.clearRect(0, 0, previewCanvasRef.current.width, previewCanvasRef.current.height);
-      previewCtx.drawImage(base, 0, 0, previewCanvasRef.current.width, previewCanvasRef.current.height);
-
+      previewCtx.drawImage(
+        base, 
+        0, 0, 
+        FLYER_WIDTH, FLYER_HEIGHT,  // Taille source originale
+        0, 0, 
+        previewCanvasRef.current.width, previewCanvasRef.current.height  // Taille cible mise à l'échelle
+      );
+  
       if (user) {
         const { x, y, width, height } = IMAGE_ZONE;
         const scaledX = x * scale;
         const scaledY = y * scale;
         const scaledWidth = width * scale;
         const scaledHeight = height * scale;
-        previewCtx.drawImage(user, scaledX, scaledY, scaledWidth, scaledHeight);
+        
+        previewCtx.drawImage(
+          user, 
+          0, 0, width, height,  // Taille source originale
+          scaledX, scaledY, 
+          scaledWidth, scaledHeight  // Taille cible mise à l'échelle
+        );
       }
     }
   };
