@@ -18,10 +18,10 @@ const ModernFlyerEditor = () => {
   const [flyerBase, setFlyerBase] = useState(null);
   const [userImage, setUserImage] = useState(null);
   const [cropper, setCropper] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(0);
   const [notifications, setNotifications] = useState([]);
-  const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [imagePreview, setImagePreview] = useState(null);
 
   // Refs
   const baseCanvasRef = useRef(null);
@@ -115,8 +115,8 @@ const ModernFlyerEditor = () => {
   const updatePreview = (base, user) => {
     if (previewCanvasRef.current && base) {
       const previewCtx = previewCanvasRef.current.getContext('2d');
-      previewCanvasRef.current.width = FLYER_WIDTH;
-      previewCanvasRef.current.height = FLYER_HEIGHT;
+      previewCanvasRef.current.width = FLYER_WIDTH / 10; // Scaled down for preview
+      previewCanvasRef.current.height = FLYER_HEIGHT / 10;
       renderFlyer(previewCtx, base, user);
     }
   };
@@ -142,6 +142,7 @@ const ModernFlyerEditor = () => {
     try {
       const compressedFile = await compressImage(file);
       const imageUrl = URL.createObjectURL(compressedFile);
+      setImagePreview(imageUrl);
 
       if (cropperImageRef.current) {
         cropperImageRef.current.src = imageUrl;
@@ -167,17 +168,16 @@ const ModernFlyerEditor = () => {
           minContainerHeight: 250,
           ready: function() {
             cropBtnRef.current.disabled = false;
+            setLoading(false);
           }
         });
 
         setCropper(newCropper);
-        setIsImageLoaded(true);
         addNotification('Image chargée avec succès', 'success');
       }
     } catch (error) {
       console.error('Erreur traitement image:', error);
       addNotification('Erreur lors du traitement de l\'image', 'error');
-    } finally {
       setLoading(false);
     }
   };
@@ -234,7 +234,11 @@ const ModernFlyerEditor = () => {
       const tempCtx = tempCanvas.getContext('2d');
 
       renderFlyer(tempCtx, flyerBase, userImage);
-      setProgress(90);
+      
+      for (let i = 0; i <= 100; i += 10) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        setProgress(i);
+      }
 
       const blob = await new Promise(resolve => 
         tempCanvas.toBlob(resolve, 'image/jpeg', 0.85)
@@ -251,7 +255,6 @@ const ModernFlyerEditor = () => {
       document.body.removeChild(link);
 
       URL.revokeObjectURL(url);
-      setProgress(100);
       addNotification('Flyer téléchargé avec succès', 'success');
     } catch (error) {
       console.error('Erreur téléchargement:', error);
@@ -271,6 +274,8 @@ const ModernFlyerEditor = () => {
       } catch (error) {
         console.error('Erreur chargement base:', error);
         addNotification('Erreur lors du chargement du modèle', 'error');
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -359,25 +364,26 @@ const ModernFlyerEditor = () => {
             <div className="border-2 border-dashed border-slate-300 rounded-xl min-h-[250px] sm:min-h-[300px] flex justify-center items-center overflow-hidden">
               <img 
                 ref={cropperImageRef} 
+                src={imagePreview} 
                 alt="Image à recadrer" 
-                className={isImageLoaded ? 'block max-w-full h-auto' : 'hidden'}
+                className={imagePreview ? 'block max-w-full h-auto' : 'hidden'}
               />
-              {!isImageLoaded && (
+              {!imagePreview && (
                 <div className="text-center text-slate-500">
                   <ImageIcon className="mx-auto mb-4 w-10 h-10 sm:w-12 sm:h-12 text-slate-400" />
                   <p className="text-sm sm:text-base">Votre image apparaîtra ici</p>
                 </div>
               )}
-            </div>
+              </div>
           </div>
 
-        {/* Action Buttons */}
-        <div className="flex justify-center gap-4">
+          {/* Action Buttons */}
+          <div className="flex justify-center gap-4">
             <button 
               ref={cropBtnRef}
               onClick={cropImage}
               className="p-3 bg-indigo-500 hover:bg-indigo-600 text-white flex items-center justify-center transition-colors rounded-xl shadow-md text-sm sm:text-base disabled:opacity-50" 
-              disabled
+              disabled={!imagePreview}
             >
               <Crop className="mr-2 w-4 h-4 sm:w-5 sm:h-5" /> Recadrer
             </button>
@@ -385,7 +391,7 @@ const ModernFlyerEditor = () => {
               ref={downloadBtnRef}
               onClick={handleDownload}
               className="p-3 bg-green-500 hover:bg-green-600 text-white flex items-center justify-center transition-colors rounded-xl shadow-md text-sm sm:text-base disabled:opacity-50" 
-              disabled
+              disabled={!userImage}
             >
               <Download className="mr-2 w-4 h-4 sm:w-5 sm:h-5" /> Télécharger
             </button>
@@ -411,7 +417,6 @@ const ModernFlyerEditor = () => {
             </div>
           )}
         </div>
-
       </div>
     </div>
   );
