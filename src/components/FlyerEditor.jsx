@@ -111,13 +111,31 @@ const ModernFlyerEditor = () => {
     }
   };
 
-  // Update preview canvas
+  // Improved Preview Rendering
   const updatePreview = (base, user) => {
     if (previewCanvasRef.current && base) {
       const previewCtx = previewCanvasRef.current.getContext('2d');
-      previewCanvasRef.current.width = FLYER_WIDTH / 10; // Scaled down for preview
-      previewCanvasRef.current.height = FLYER_HEIGHT / 10;
-      renderFlyer(previewCtx, base, user);
+      
+      // Calculate scale based on container width
+      const containerWidth = previewCanvasRef.current.parentElement.clientWidth;
+      const scale = containerWidth / FLYER_WIDTH;
+      
+      // Set canvas dimensions with scaled width and height
+      previewCanvasRef.current.width = FLYER_WIDTH * scale;
+      previewCanvasRef.current.height = FLYER_HEIGHT * scale;
+      
+      // Clear and render with scaling
+      previewCtx.clearRect(0, 0, previewCanvasRef.current.width, previewCanvasRef.current.height);
+      previewCtx.drawImage(base, 0, 0, previewCanvasRef.current.width, previewCanvasRef.current.height);
+
+      if (user) {
+        const { x, y, width, height } = IMAGE_ZONE;
+        const scaledX = x * scale;
+        const scaledY = y * scale;
+        const scaledWidth = width * scale;
+        const scaledHeight = height * scale;
+        previewCtx.drawImage(user, scaledX, scaledY, scaledWidth, scaledHeight);
+      }
     }
   };
 
@@ -402,14 +420,15 @@ const ModernFlyerEditor = () => {
         <div className="mt-6 p-4 sm:p-8 bg-slate-50">
           <h2 className="text-xl font-semibold mb-4 text-center">Prévisualisation du Flyer</h2>
           <div className="rounded-xl overflow-hidden shadow-lg max-w-2xl mx-auto">
-            <canvas 
-              ref={previewCanvasRef}
-              className="w-full h-auto" 
-              style={{ 
-                maxWidth: '100%',
-                aspectRatio: `${FLYER_WIDTH}/${FLYER_HEIGHT}`
-              }}
-            />
+          <canvas 
+            ref={previewCanvasRef}
+            className="w-full h-auto" 
+            style={{ 
+              maxWidth: '100%',
+              aspectRatio: `${FLYER_WIDTH}/${FLYER_HEIGHT}`,
+              display: 'block' // Assure un affichage précis
+            }}
+          />
           </div>
           {!flyerBase && (
             <div className="text-center text-slate-500 py-4">
