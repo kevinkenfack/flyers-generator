@@ -321,7 +321,7 @@ const ModernFlyerEditor = () => {
     const loadFlyerBase = async () => {
       try {
         // Utiliser un chemin d'image haute qualité et plus haute résolution
-        const baseImage = await loadImage('/high-quality-forex.jpg');
+        const baseImage = await loadImage('/forex.jpg');
         
         // Vérifier la résolution de l'image
         if (baseImage.width < FLYER_WIDTH || baseImage.height < FLYER_HEIGHT) {
