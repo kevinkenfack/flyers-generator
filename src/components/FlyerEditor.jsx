@@ -22,7 +22,6 @@ const ModernFlyerEditor = () => {
   const [progress, setProgress] = useState(0);
   const [notifications, setNotifications] = useState([]);
   const [imagePreview, setImagePreview] = useState(null);
-  const [downloadError, setDownloadError] = useState(null);
 
   // Refs
   const baseCanvasRef = useRef(null);
@@ -38,12 +37,12 @@ const ModernFlyerEditor = () => {
     const id = Date.now();
     const newNotification = { id, message, type };
     setNotifications(prev => [...prev, newNotification]);
-    setTimeout(() => removeNotification(id), 5000);
+    setTimeout(() => removeNotification(id), 3000);
   };
 
   const removeNotification = (id) => {
     setNotifications(prev => prev.filter(notification => notification.id !== id));
-  };
+ };
 
   const NotificationIcon = {
     success: <CheckCircle2 className="w-5 h-5 text-green-500" />,
@@ -62,7 +61,7 @@ const ModernFlyerEditor = () => {
     });
   };
 
-  const compressImage = async (file) => {
+  const compressImage = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -112,16 +111,20 @@ const ModernFlyerEditor = () => {
     }
   };
 
+  // Improved Preview Rendering
   const updatePreview = (base, user) => {
     if (previewCanvasRef.current && base) {
       const previewCtx = previewCanvasRef.current.getContext('2d');
       
+      // Calculate scale based on container width
       const containerWidth = previewCanvasRef.current.parentElement.clientWidth;
       const scale = containerWidth / FLYER_WIDTH;
       
+      // Set canvas dimensions with scaled width and height
       previewCanvasRef.current.width = FLYER_WIDTH * scale;
       previewCanvasRef.current.height = FLYER_HEIGHT * scale;
       
+      // Clear and render with scaling
       previewCtx.clearRect(0, 0, previewCanvasRef.current.width, previewCanvasRef.current.height);
       previewCtx.drawImage(base, 0, 0, previewCanvasRef.current.width, previewCanvasRef.current.height);
 
@@ -136,7 +139,7 @@ const ModernFlyerEditor = () => {
     }
   };
 
-  // Improved Image Upload Handler
+  // Image Upload Handlers
   const handleImageUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -147,13 +150,12 @@ const ModernFlyerEditor = () => {
       return;
     }
 
-    if (file.size > 15 * 1024 * 1024) {
-      addNotification('Image trop volumineuse (max 15 Mo)', 'error');
+    if (file.size > 10 * 1024 * 1024) {
+      addNotification('Image trop volumineuse (max 10 Mo)', 'error');
       return;
     }
 
     setLoading(true);
-    setDownloadError(null);
 
     try {
       const compressedFile = await compressImage(file);
@@ -167,6 +169,7 @@ const ModernFlyerEditor = () => {
           cropper.destroy();
         }
 
+        // Initialize new cropper
         const newCropper = new Cropper(cropperImageRef.current, {
           aspectRatio: 1,
           viewMode: 2,
@@ -220,6 +223,7 @@ const ModernFlyerEditor = () => {
       const croppedImage = await loadImage(URL.createObjectURL(blob));
       setUserImage(croppedImage);
       
+      // Update preview with cropped image
       updatePreview(flyerBase, croppedImage);
       
       downloadBtnRef.current.disabled = false;
@@ -240,7 +244,6 @@ const ModernFlyerEditor = () => {
 
     setLoading(true);
     setProgress(0);
-    setDownloadError(null);
 
     try {
       const tempCanvas = document.createElement('canvas');
@@ -250,102 +253,42 @@ const ModernFlyerEditor = () => {
 
       renderFlyer(tempCtx, flyerBase, userImage);
       
-      // Enhanced progress simulation
-      const simulateProgress = () => {
-        return new Promise((resolve) => {
-          let currentProgress = 0;
-          const interval = setInterval(() => {
-            currentProgress += 10;
-            setProgress(currentProgress);
-            if (currentProgress >= 100) {
-              clearInterval(interval);
-              resolve();
-            }
-          }, 100);
-        });
-      };
-
-      await simulateProgress();
+      for (let i = 0; i <= 100; i += 10) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        setProgress(i);
+      }
 
       const blob = await new Promise(resolve => 
-        tempCanvas.toBlob(resolve, 'image/jpeg', 0.95)
+        tempCanvas.toBlob(resolve, 'image/jpeg', 0.85)
       );
 
       const url = URL.createObjectURL(blob);
       const filename = `flyer_${new Date().toISOString().slice(0,10)}.jpg`;
 
-      // Fallback download method for mobile devices
-      const downloadFile = () => {
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      };
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = url;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
 
-      // Check if we're on a mobile device
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      
-      if (isMobile) {
-        // For mobile, try multiple download methods
-        try {
-          if (window.navigator && window.navigator.msSaveBlob) {
-            // For IE/Edge
-            window.navigator.msSaveBlob(blob, filename);
-          } else {
-            downloadFile();
-          }
-        } catch (mobileError) {
-          console.error('Mobile download error:', mobileError);
-          setDownloadError('Échec du téléchargement. Veuillez réessayer.');
-        }
-      } else {
-        // Desktop download
-        downloadFile();
-      }
-
+      URL.revokeObjectURL(url);
       addNotification('Flyer téléchargé avec succès', 'success');
     } catch (error) {
       console.error('Erreur téléchargement:', error);
-      setDownloadError('Échec du téléchargement. Veuillez réessayer.');
       addNotification('Erreur lors du téléchargement', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  // Load base flyer with improved quality and error handling
+  // Load base flyer and initialize preview on component mount
   useEffect(() => {
     const loadFlyerBase = async () => {
       try {
-        // Utiliser un chemin d'image haute qualité et plus haute résolution
         const baseImage = await loadImage('/forex.jpg');
-        
-        // Vérifier la résolution de l'image
-        if (baseImage.width < FLYER_WIDTH || baseImage.height < FLYER_HEIGHT) {
-          addNotification('Résolution du modèle insuffisante', 'error');
-        }
-
-        // Créer un canvas temporaire pour améliorer la qualité
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = FLYER_WIDTH;
-        tempCanvas.height = FLYER_HEIGHT;
-        const tempCtx = tempCanvas.getContext('2d');
-        
-        // Dessiner l'image en utilisant une méthode de rendu de haute qualité
-        tempCtx.imageSmoothingEnabled = true;
-        tempCtx.imageSmoothingQuality = 'high';
-        tempCtx.drawImage(baseImage, 0, 0, FLYER_WIDTH, FLYER_HEIGHT);
-
-        const processedBaseImage = new Image();
-        processedBaseImage.src = tempCanvas.toDataURL('image/jpeg', 0.95);
-        
-        processedBaseImage.onload = () => {
-          setFlyerBase(processedBaseImage);
-          updatePreview(processedBaseImage, null);
-        };
+        setFlyerBase(baseImage);
+        updatePreview(baseImage, null);
       } catch (error) {
         console.error('Erreur chargement base:', error);
         addNotification('Erreur lors du chargement du modèle', 'error');
@@ -378,8 +321,8 @@ const ModernFlyerEditor = () => {
         ))}
       </div>
 
-     {/* Improved Loading Overlay */}
-     {loading && (
+      {/* Loading Overlay */}
+      {loading && (
         <div className="fixed inset-0 bg-white/90 z-50 flex flex-col justify-center items-center">
           <div className="w-16 h-16 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
           <div className="progress-bar w-64 h-2 bg-slate-200 rounded-full overflow-hidden">
@@ -388,11 +331,6 @@ const ModernFlyerEditor = () => {
               style={{ width: `${progress}%` }}
             ></div>
           </div>
-          {downloadError && (
-            <div className="text-red-500 mt-4 text-center">
-              {downloadError}
-            </div>
-          )}
         </div>
       )}
 
@@ -454,7 +392,7 @@ const ModernFlyerEditor = () => {
                   <p className="text-sm sm:text-base">Votre image apparaîtra ici</p>
                 </div>
               )}
-            </div>
+              </div>
           </div>
 
           {/* Action Buttons */}
@@ -488,7 +426,7 @@ const ModernFlyerEditor = () => {
             style={{ 
               maxWidth: '100%',
               aspectRatio: `${FLYER_WIDTH}/${FLYER_HEIGHT}`,
-              display: 'block'
+              display: 'block' // Assure un affichage précis
             }}
           />
           </div>
@@ -504,27 +442,3 @@ const ModernFlyerEditor = () => {
 };
 
 export default ModernFlyerEditor;
-
-// Styles personnalisés pour les animations et transitions
-const styles = `
-@keyframes slide-in {
-  from { 
-    opacity: 0; 
-    transform: translateX(20px); 
-  }
-  to { 
-    opacity: 1; 
-    transform: translateX(0); 
-  }
-}
-
-.animate-slide-in {
-  animation: slide-in 0.3s ease-out;
-}
-`;
-
-// Injection du style dans le document
-const styleSheet = document.createElement("style")
-styleSheet.type = "text/css"
-styleSheet.innerText = styles
-document.head.appendChild(styleSheet);
