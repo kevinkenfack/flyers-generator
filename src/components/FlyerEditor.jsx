@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Cropper from 'cropperjs';
 import 'cropperjs/dist/cropper.min.css';
-import { Download, Camera, Image as ImageIcon, Crop, CheckCircle2, XCircle, Info } from 'lucide-react';
+import { Download, Camera, Image as ImageIcon, Crop, CheckCircle2, XCircle, Info, ArrowUpRight } from 'lucide-react';
 
 const ModernFlyerEditor = () => {
   // Constants for flyer dimensions and image zone
@@ -42,7 +42,7 @@ const ModernFlyerEditor = () => {
 
   const removeNotification = (id) => {
     setNotifications(prev => prev.filter(notification => notification.id !== id));
- };
+  };
 
   const NotificationIcon = {
     success: <CheckCircle2 className="w-5 h-5 text-green-500" />,
@@ -50,7 +50,7 @@ const ModernFlyerEditor = () => {
     info: <Info className="w-5 h-5 text-blue-500" />
   };
 
-  // Utility Functions
+  // Utility Functions (keep existing utility functions from previous implementation)
   const loadImage = (src) => {
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -301,21 +301,21 @@ const ModernFlyerEditor = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 flex justify-center items-center">
+    <div className="min-h-screen bg-gray-950 text-white">
       {/* Notification Container */}
       <div className="fixed top-4 right-4 z-50 space-y-2">
         {notifications.map((notification) => (
           <div 
             key={notification.id}
-            className="flex items-center space-x-3 bg-white shadow-lg rounded-lg p-3 border transition-all duration-300 ease-in-out animate-slide-in"
+            className="flex items-center space-x-3 bg-white/5 backdrop-blur-lg rounded-xl p-3 border border-white/10 transition-all duration-300 ease-in-out animate-slide-in"
           >
             {NotificationIcon[notification.type]}
-            <span className="text-sm text-slate-800">{notification.message}</span>
+            <span className="text-sm text-white/80">{notification.message}</span>
             <button 
               onClick={() => removeNotification(notification.id)} 
-              className="ml-2 hover:bg-slate-100 rounded-full p-1"
+              className="ml-2 hover:bg-white/10 rounded-full p-1"
             >
-              <XCircle className="w-4 h-4 text-slate-400 hover:text-slate-600" />
+              <XCircle className="w-4 h-4 text-white/50 hover:text-white/80" />
             </button>
           </div>
         ))}
@@ -323,9 +323,9 @@ const ModernFlyerEditor = () => {
 
       {/* Loading Overlay */}
       {loading && (
-        <div className="fixed inset-0 bg-white/90 z-50 flex flex-col justify-center items-center">
-          <div className="w-16 h-16 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
-          <div className="progress-bar w-64 h-2 bg-slate-200 rounded-full overflow-hidden">
+        <div className="fixed inset-0 bg-gray-950/90 z-50 flex flex-col justify-center items-center">
+          <div className="w-16 h-16 border-4 border-white/20 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+          <div className="progress-bar w-64 h-2 bg-white/10 rounded-full overflow-hidden">
             <div 
               className="h-full bg-blue-600 transition-all duration-300" 
               style={{ width: `${progress}%` }}
@@ -334,107 +334,123 @@ const ModernFlyerEditor = () => {
         </div>
       )}
 
-      <div className="w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden">
-        {/* Header with Gradient */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-6 sm:p-8 text-center">
-          <h1 className="text-2xl sm:text-3xl font-bold mb-2 sm:mb-3 tracking-tight">Créez votre Flyer Personnalisé</h1>
-          <p className="text-white/80 text-sm sm:text-base max-w-xl mx-auto">Transformez vos photos en flyers professionnels en quelques clics</p>
-        </div>
-
-        {/* Main Content */}
-        <div className="p-4 sm:p-8 space-y-6">
-          {/* Image Upload Section */}
-          <div className="grid sm:grid-cols-2 gap-4 sm:gap-6 items-center">
-            {/* Image Selection Buttons */}
-            <div className="space-y-4">
-              <button 
-                onClick={() => imageInputRef.current.click()} 
-                className="w-full p-3 bg-blue-500 hover:bg-blue-600 text-white flex items-center justify-center transition-colors rounded-xl shadow-md text-sm sm:text-base"
-              >
-                <ImageIcon className="mr-2 w-4 h-4 sm:w-5 sm:h-5" /> Choisir une image
-              </button>
-              <button 
-                onClick={() => cameraInputRef.current.click()} 
-                className="w-full p-3 bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center transition-colors rounded-xl shadow-md text-sm sm:text-base"
-              >
-                <Camera className="mr-2 w-4 h-4 sm:w-5 sm:h-5" /> Prendre une photo
-              </button>
-
-              {/* Hidden file inputs */}
-              <input 
-                type="file" 
-                ref={imageInputRef}
-                accept="image/*" 
-                className="hidden" 
-                onChange={handleImageUpload} 
-              />
-              <input 
-                type="file" 
-                ref={cameraInputRef}
-                accept="image/*" 
-                capture="environment" 
-                className="hidden" 
-                onChange={handleImageUpload} 
-              />
-            </div>
-
-            {/* Image Preview Area */}
-            <div className="border-2 border-dashed border-slate-300 rounded-xl min-h-[250px] sm:min-h-[300px] flex justify-center items-center overflow-hidden">
-              <img 
-                ref={cropperImageRef} 
-                src={imagePreview} 
-                alt="Image à recadrer" 
-                className={imagePreview ? 'block max-w-full h-auto' : 'hidden'}
-              />
-              {!imagePreview && (
-                <div className="text-center text-slate-500">
-                  <ImageIcon className="mx-auto mb-4 w-10 h-10 sm:w-12 sm:h-12 text-slate-400" />
-                  <p className="text-sm sm:text-base">Votre image apparaîtra ici</p>
-                </div>
-              )}
+      {/* Main Content */}
+      <div className="relative pt-24 px-4 sm:px-6 pb-12 max-w-4xl mx-auto">
+        <div className="group mb-8">
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-900/50 via-blue-900/50 to-purple-900/50 p-[1px] transition-all duration-300 hover:from-purple-600/50 hover:via-blue-600/50 hover:to-purple-600/50">
+            <div className="relative bg-gray-950/95 rounded-3xl p-6 backdrop-blur-xl overflow-hidden">
+              {/* Decorative Blob Background */}
+              <div className="absolute inset-0 opacity-30">
+                <div className="absolute top-0 -left-4 w-24 h-24 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl animate-blob" />
+                <div className="absolute top-0 -right-4 w-24 h-24 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-2000" />
+                <div className="absolute -bottom-8 left-20 w-24 h-24 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-4000" />
               </div>
-          </div>
 
-          {/* Action Buttons */}
-          <div className="flex justify-center gap-4">
-            <button 
-              ref={cropBtnRef}
-              onClick={cropImage}
-              className="p-3 bg-indigo-500 hover:bg-indigo-600 text-white flex items-center justify-center transition-colors rounded-xl shadow-md text-sm sm:text-base disabled:opacity-50" 
-              disabled={!imagePreview}
-            >
-              <Crop className="mr-2 w-4 h-4 sm:w-5 sm:h-5" /> Recadrer
-            </button>
-            <button 
-              ref={downloadBtnRef}
-              onClick={handleDownload}
-              className="p-3 bg-green-500 hover:bg-green-600 text-white flex items-center justify-center transition-colors rounded-xl shadow-md text-sm sm:text-base disabled:opacity-50" 
-              disabled={!userImage}
-            >
-              <Download className="mr-2 w-4 h-4 sm:w-5 sm:h-5" /> Télécharger
-            </button>
+              {/* Image Upload Section */}
+              <div className="relative z-10 grid sm:grid-cols-2 gap-6 items-center">
+                {/* Image Selection Buttons */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-blue-400 px-4 py-1 rounded-full text-sm backdrop-blur-sm border border-white/10">
+                      Créateur de Flyers
+                    </div>
+                    <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                  </div>
+
+                  <button 
+                    onClick={() => imageInputRef.current.click()} 
+                    className="w-full p-3 bg-white/5 hover:bg-white/10 text-white flex items-center justify-center transition-colors rounded-xl border border-white/10"
+                  >
+                    <ImageIcon className="mr-2 w-5 h-5" /> Choisir une image
+                  </button>
+                  <button 
+                    onClick={() => cameraInputRef.current.click()} 
+                    className="w-full p-3 bg-white/5 hover:bg-white/10 text-white flex items-center justify-center transition-colors rounded-xl border border-white/10"
+                  >
+                    <Camera className="mr-2 w-5 h-5" /> Prendre une photo
+                  </button>
+
+                  {/* Hidden file inputs */}
+                  <input 
+                    type="file" 
+                    ref={imageInputRef}
+                    accept="image/*" 
+                    className="hidden" 
+                    onChange={handleImageUpload} 
+                  />
+                  <input 
+                    type="file" 
+                    ref={cameraInputRef}
+                    accept="image/*" 
+                    capture="environment" 
+                    className="hidden" 
+                    onChange={handleImageUpload} 
+                  />
+                </div>
+
+                {/* Image Preview Area */}
+                <div className="border-2 border-dashed border-white/20 rounded-xl min-h-[250px] sm:min-h-[300px] flex justify-center items-center overflow-hidden relative">
+                  <img 
+                    ref={cropperImageRef} 
+                    src={imagePreview} 
+                    alt="Image à recadrer" 
+                    className={imagePreview ? 'block max-w-full h-auto' : 'hidden'}
+                  />
+                  {!imagePreview && (
+                    <div className="text-center text-white/50">
+                      <ImageIcon className="mx-auto mb-4 w-10 h-10 text-white/30" />
+                      <p className="text-sm">Votre image apparaîtra ici</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="mt-6 flex justify-center gap-4">
+                <button 
+                  ref={cropBtnRef}
+                  onClick={cropImage}
+                  className="relative inline-flex items-center justify-center px-6 py-3 overflow-hidden font-medium transition-all bg-blue-500/10 rounded-xl hover:bg-blue-500/20 group border border-blue-500/20" 
+                  disabled={!imagePreview}
+                >
+                  <span className="w-48 h-48 rounded rotate-[-40deg] bg-white/10 absolute bottom-0 left-0 -translate-x-full ease-out duration-500 transition-all translate-y-full mb-9 ml-9 group-hover:ml-0 group-hover:mb-32 group-hover:translate-x-0"></span>
+                  <span className="relative w-full text-left flex items-center justify-between">
+                    <Crop className="w-5 h-5 mr-2" /> Recadrer
+                    <ArrowUpRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
+                  </span>
+                </button>
+
+                <button 
+                  ref={downloadBtnRef}
+                  onClick={handleDownload}
+                  className="relative inline-flex items-center justify-center px-6 py-3 overflow-hidden font-medium transition-all bg-green-500/10 rounded-xl hover:bg-green-500/20 group border border-green-500/20" 
+                  disabled={!userImage}
+                >
+                  <span className="w-48 h-48 rounded rotate-[-40deg] bg-white/10 absolute bottom-0 left-0 -translate-x-full ease-out duration-500 transition-all translate-y-full mb-9 ml-9 group-hover:ml-0 group-hover:mb-32 group-hover:translate-x-0"></span>
+                  <span className="relative w-full text-left flex items-center justify-between">
+                    <Download className="w-5 h-5 mr-2" /> Télécharger
+                    <ArrowUpRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
+                  </span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Preview Section - Always visible */}
-        <div className="mt-6 p-4 sm:p-8 bg-slate-50">
-          <h2 className="text-xl font-semibold mb-4 text-center">Prévisualisation du Flyer</h2>
-          <div className="rounded-xl overflow-hidden shadow-lg max-w-2xl mx-auto">
-          <canvas 
-            ref={previewCanvasRef}
-            className="w-full h-auto" 
-            style={{ 
-              maxWidth: '100%',
-              aspectRatio: `${FLYER_WIDTH}/${FLYER_HEIGHT}`,
-              display: 'block' // Assure un affichage précis
-            }}
-          />
+        {/* Preview Section */}
+        <div className="space-y-4">
+          <h4 className="text-sm font-medium text-gray-400 tracking-wider">PRÉVISUALISATION DU FLYER</h4>
+          <div className="rounded-2xl bg-white/5 backdrop-blur-sm border border-white/5 p-4">
+            <canvas 
+              ref={previewCanvasRef}
+              className="w-full h-auto rounded-xl" 
+              style={{ 
+                maxWidth: '100%',
+                aspectRatio: `${FLYER_WIDTH}/${FLYER_HEIGHT}`,
+                display: 'block'
+              }}
+            />
           </div>
-          {!flyerBase && (
-            <div className="text-center text-slate-500 py-4">
-              <p>Chargement du modèle de flyer...</p>
-            </div>
-          )}
         </div>
       </div>
     </div>
